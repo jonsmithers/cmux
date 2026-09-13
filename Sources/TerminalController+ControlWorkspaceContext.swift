@@ -402,6 +402,11 @@ extension TerminalController: ControlWorkspaceContext {
         if let workspaceId = routing.workspaceID {
             return tabManager.tabs.first(where: { $0.id == workspaceId })
         }
+        if let pageId = routing.pageID,
+           let located = v2LocatePage(pageId) {
+            guard located.tabManager === tabManager else { return nil }
+            return located.workspace
+        }
         if let surfaceId = routing.surfaceID {
             return tabManager.tabs.first(where: { $0.panels[surfaceId] != nil })
         }

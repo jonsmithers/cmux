@@ -14,11 +14,16 @@ extension TerminalController {
         tabManager: TabManager
     ) -> [String: Any]? {
         let callerWindowId = v2ResolveWindowId(tabManager: tabManager)
+        let callerPageId = workspace.activePageId
         var payload: [String: Any] = [
             "window_id": v2OrNull(callerWindowId?.uuidString),
             "window_ref": v2Ref(kind: .window, uuid: callerWindowId),
             "workspace_id": workspace.id.uuidString,
             "workspace_ref": v2Ref(kind: .workspace, uuid: workspace.id),
+            "page_id": callerPageId.uuidString,
+            "page_ref": v2Ref(kind: .page, uuid: callerPageId),
+            "page_index": v2OrNull(workspace.pageIndex(pageId: callerPageId)),
+            "page_title": workspace.pageTitle(pageId: callerPageId) ?? "",
         ]
 
         if let surfaceId {

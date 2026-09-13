@@ -280,6 +280,10 @@ class TerminalController {
         "workspace.next",
         "workspace.previous",
         "workspace.last",
+        "page.select",
+        "page.next",
+        "page.previous",
+        "page.last",
         "workspace.group.focus",
         "workspace.cloud_vm_open",
         "surface.focus",
@@ -2548,6 +2552,17 @@ class TerminalController {
             "feed.exit_plan.reply",
             "feed.jump",
             "feed.list",
+            "page.list",
+            "page.create",
+            "page.duplicate",
+            "page.select",
+            "page.current",
+            "page.close",
+            "page.reorder",
+            "page.rename",
+            "page.next",
+            "page.previous",
+            "page.last",
             "surface.list",
             "surface.current",
             "surface.focus",
@@ -2726,11 +2741,16 @@ class TerminalController {
                 }
                 let paneUUID = projection?.paneID
                 let surfaceUUID = projection?.surfaceID
+                let pageId = ws.activePageId
                 focused = [
                     "window_id": v2OrNull(windowId?.uuidString),
                     "window_ref": v2Ref(kind: .window, uuid: windowId),
                     "workspace_id": wsId.uuidString,
                     "workspace_ref": v2Ref(kind: .workspace, uuid: wsId),
+                    "page_id": pageId.uuidString,
+                    "page_ref": v2Ref(kind: .page, uuid: pageId),
+                    "page_index": v2OrNull(ws.pageIndex(pageId: pageId)),
+                    "page_title": ws.pageTitle(pageId: pageId) ?? "",
                     "pane_id": v2OrNull(paneUUID?.uuidString),
                     "pane_ref": v2Ref(kind: .pane, uuid: paneUUID),
                     "surface_id": v2OrNull(surfaceUUID?.uuidString),
@@ -3643,6 +3663,13 @@ class TerminalController {
             if let tm = app.tabManagerFor(windowId: item.windowId) {
                 for ws in tm.tabs {
                     _ = v2EnsureHandleRef(kind: .workspace, uuid: ws.id)
+                    // Mint page refs for every page (not just the active one)
+                    // before any page.* call so callers can pass `page:N`
+                    // immediately after restore, mirroring the workspace_group
+                    // pre-mint below (docs/workspace-pages-spec.md).
+                    for page in ws.pages {
+                        _ = v2EnsureHandleRef(kind: .page, uuid: page.id)
+                    }
                     v2RefreshRemoteTmuxAwarePaneAndSurfaceRefs(workspace: ws)
                 }
                 // Mint workspace_group refs for groups that exist before any
@@ -3739,6 +3766,10 @@ class TerminalController {
             if let tm = AppDelegate.shared?.tabManagerForWindowDockOwner(workspaceId) {
                 return tm
             }
+        }
+        if let pageId = routing.pageID,
+           let located = v2LocatePage(pageId) {
+            return located.tabManager
         }
         if let surfaceId = routing.surfaceID {
             if let manager = controlTabManager(surfaceID: surfaceId) { return manager }

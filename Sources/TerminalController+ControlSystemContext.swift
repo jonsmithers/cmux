@@ -183,6 +183,27 @@ extension TerminalController: ControlSystemContext {
             )
         }
 
+        let pageNodes: [ControlSystemTreePageNode] = workspace.pages.enumerated().compactMap { pageIndex, page in
+            guard let pageSnapshot = workspace.pageStateSnapshot(pageId: page.id, includeScrollback: false) else {
+                return nil
+            }
+            let isSelected = page.id == workspace.activePageId
+            return ControlSystemTreePageNode(
+                pageID: page.id,
+                index: pageIndex,
+                title: page.title,
+                isSelected: isSelected,
+                paneCount: isSelected ? panes.count : controlSystemTreePaneSnapshots(in: pageSnapshot.layout).count,
+                surfaceCount: pageSnapshot.panels.count,
+                // The active page's Bonsplit controller is the live source of
+                // truth (built above, with real live pane/surface identities);
+                // an inactive page's panes are read from its stashed session
+                // snapshot, so they carry synthetic (non-live) pane identities
+                // until the page is next selected.
+                panes: isSelected ? panes : controlSystemTreeStoredPagePanes(pageSnapshot)
+            )
+        }
+
         return ControlSystemTreeWorkspaceNode(
             workspaceID: workspace.id,
             index: index,
@@ -190,8 +211,69 @@ extension TerminalController: ControlSystemContext {
             description: workspace.customDescription,
             isSelected: selected,
             isPinned: workspace.isPinned,
-            panes: panes
+            panes: panes,
+            selectedPageID: workspace.activePageId,
+            pages: pageNodes
         )
+    }
+
+    // MARK: - system.tree page nesting (workspace-pages)
+
+    /// Pane nodes for a stashed (inactive) page's stored session-state
+    /// snapshot. `paneID` has no live identity for a non-mounted page (Bonsplit
+    /// pane containers are re-minted fresh whenever a page is restored), so
+    /// each pane gets a fresh synthetic UUID — harmless: minting a `pane:N`
+    /// ref for it is inert until the page is next selected and a real pane
+    /// with a different id is created.
+    /// PORT-TODO(#4766): if a client needs a *stable* identity for an
+    /// inactive page's pane across repeated `system.tree` calls (e.g. to diff
+    /// two tree snapshots), this synthetic id will not satisfy that — revisit
+    /// if that need materializes.
+    private func controlSystemTreeStoredPagePanes(
+        _ snapshot: SessionWorkspacePageStateSnapshot
+    ) -> [ControlSystemTreePaneNode] {
+        let panelsByID = Dictionary(uniqueKeysWithValues: snapshot.panels.map { ($0.id, $0) })
+        return controlSystemTreePaneSnapshots(in: snapshot.layout).enumerated().map { paneIndex, pane in
+            let surfaces: [ControlSystemTreeSurfaceNode] = pane.panelIds.enumerated().compactMap { surfaceIndex, panelId in
+                guard let panel = panelsByID[panelId] else { return nil }
+                let isSelected = pane.selectedPanelId == panelId
+                return ControlSystemTreeSurfaceNode(
+                    surfaceID: panelId,
+                    index: surfaceIndex,
+                    typeRawValue: panel.type.rawValue,
+                    title: panel.customTitle ?? panel.title ?? "",
+                    isFocused: panelId == snapshot.focusedPanelId,
+                    isSelected: isSelected,
+                    selectedInPane: isSelected,
+                    paneID: nil,
+                    indexInPane: surfaceIndex,
+                    tty: nil,
+                    isBrowser: panel.type == .browser,
+                    url: panel.type == .browser ? (panel.browser?.urlString ?? "") : nil,
+                    dockScopeRawValue: nil
+                )
+            }
+            return ControlSystemTreePaneNode(
+                paneID: UUID(),
+                index: paneIndex,
+                isFocused: surfaces.contains { $0.isFocused },
+                surfaceIDs: pane.panelIds,
+                selectedSurfaceID: pane.selectedPanelId,
+                surfaces: surfaces,
+                dockScopeRawValue: nil
+            )
+        }
+    }
+
+    private func controlSystemTreePaneSnapshots(
+        in layout: SessionWorkspaceLayoutSnapshot
+    ) -> [SessionPaneLayoutSnapshot] {
+        switch layout {
+        case .pane(let pane):
+            return [pane]
+        case .split(let split):
+            return controlSystemTreePaneSnapshots(in: split.first) + controlSystemTreePaneSnapshots(in: split.second)
+        }
     }
 
     // MARK: - auth.login / session / settings / feedback

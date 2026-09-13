@@ -132,6 +132,22 @@ extension TerminalController {
         return nil
     }
 
+    /// Locates the workspace/window owning a workspace page (see
+    /// docs/workspace-pages-spec.md), mirroring `v2LocatePane` above.
+    func v2LocatePage(_ pageUUID: UUID) -> (windowId: UUID, tabManager: TabManager, workspace: Workspace, pageIndex: Int)? {
+        guard let app = AppDelegate.shared else { return nil }
+        let windows = app.listMainWindowSummaries()
+        for item in windows {
+            guard let tm = app.tabManagerFor(windowId: item.windowId) else { continue }
+            for ws in tm.tabs {
+                if let pageIndex = ws.pageIndex(pageId: pageUUID) {
+                    return (item.windowId, tm, ws, pageIndex)
+                }
+            }
+        }
+        return nil
+    }
+
     nonisolated func v2Int(_ params: [String: Any], _ key: String) -> Int? {
         if let i = params[key] as? Int { return i }
         if let n = params[key] as? NSNumber { return n.intValue }
