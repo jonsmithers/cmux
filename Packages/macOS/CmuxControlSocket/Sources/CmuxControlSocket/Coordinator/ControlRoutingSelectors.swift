@@ -11,8 +11,9 @@ public import Foundation
 ///
 /// Precedence (highest first), preserved from the legacy resolver: an explicit
 /// `window_id` param wins outright (and a present-but-unresolvable `window_id`
-/// resolves to no target); then group, then workspace, then surface, then pane;
-/// finally the caller's own window, then the active scriptable window.
+/// resolves to no target); then group, then workspace, then page, then
+/// surface, then pane; finally the caller's own window, then the active
+/// scriptable window.
 public struct ControlRoutingSelectors: Sendable, Equatable {
     /// Whether the request carried a non-null `window_id` param at all. A
     /// present-but-unresolvable `window_id` must resolve to no target rather
@@ -24,6 +25,10 @@ public struct ControlRoutingSelectors: Sendable, Equatable {
     public let groupID: UUID?
     /// The resolved `workspace_id` target, if any.
     public let workspaceID: UUID?
+    /// The resolved `page_id` target, if any (locates the owning workspace by
+    /// containment when `workspace_id` was not given — see the workspace-pages
+    /// port, docs/workspace-pages-spec.md).
+    public let pageID: UUID?
     /// The resolved surface target (`surface_id`, then `terminal_id`, then
     /// `tab_id`), if any.
     public let surfaceID: UUID?
@@ -37,6 +42,7 @@ public struct ControlRoutingSelectors: Sendable, Equatable {
     ///   - windowID: The resolved `window_id` target.
     ///   - groupID: The resolved `group_id` target.
     ///   - workspaceID: The resolved `workspace_id` target.
+    ///   - pageID: The resolved `page_id` target.
     ///   - surfaceID: The resolved surface target.
     ///   - paneID: The resolved `pane_id` target.
     public init(
@@ -44,6 +50,7 @@ public struct ControlRoutingSelectors: Sendable, Equatable {
         windowID: UUID?,
         groupID: UUID?,
         workspaceID: UUID?,
+        pageID: UUID? = nil,
         surfaceID: UUID?,
         paneID: UUID?
     ) {
@@ -51,6 +58,7 @@ public struct ControlRoutingSelectors: Sendable, Equatable {
         self.windowID = windowID
         self.groupID = groupID
         self.workspaceID = workspaceID
+        self.pageID = pageID
         self.surfaceID = surfaceID
         self.paneID = paneID
     }

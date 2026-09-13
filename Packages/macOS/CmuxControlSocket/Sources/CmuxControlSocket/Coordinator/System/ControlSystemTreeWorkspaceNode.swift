@@ -15,8 +15,15 @@ public struct ControlSystemTreeWorkspaceNode: Sendable, Equatable {
     public let isSelected: Bool
     /// Whether the workspace is pinned.
     public let isPinned: Bool
-    /// The workspace's pane nodes, in pane order.
+    /// The workspace's pane nodes, in pane order. Mirrors the selected page's
+    /// panes (see ``pages``), preserved at this level for older tree
+    /// consumers that predate workspace pages
+    /// (docs/workspace-pages-spec.md).
     public let panes: [ControlSystemTreePaneNode]
+    /// The active page's identifier.
+    public let selectedPageID: UUID
+    /// The workspace's page nodes, in page order.
+    public let pages: [ControlSystemTreePageNode]
 
     /// Creates a workspace node.
     ///
@@ -27,7 +34,9 @@ public struct ControlSystemTreeWorkspaceNode: Sendable, Equatable {
     ///   - description: The custom description, if any.
     ///   - isSelected: Whether this is the selected workspace.
     ///   - isPinned: Whether the workspace is pinned.
-    ///   - panes: The workspace's pane nodes.
+    ///   - panes: The selected page's pane nodes (legacy mirror).
+    ///   - selectedPageID: The active page's identifier.
+    ///   - pages: The workspace's page nodes.
     public init(
         workspaceID: UUID,
         index: Int,
@@ -35,7 +44,9 @@ public struct ControlSystemTreeWorkspaceNode: Sendable, Equatable {
         description: String?,
         isSelected: Bool,
         isPinned: Bool,
-        panes: [ControlSystemTreePaneNode]
+        panes: [ControlSystemTreePaneNode],
+        selectedPageID: UUID,
+        pages: [ControlSystemTreePageNode]
     ) {
         self.workspaceID = workspaceID
         self.index = index
@@ -44,5 +55,7 @@ public struct ControlSystemTreeWorkspaceNode: Sendable, Equatable {
         self.isSelected = isSelected
         self.isPinned = isPinned
         self.panes = panes
+        self.selectedPageID = selectedPageID
+        self.pages = pages
     }
 }

@@ -200,6 +200,13 @@ extension ControlCommandCoordinator {
     private struct SystemTreeWorkspaceRefs: Sendable {
         let workspaceRef: JSONValue
         let panes: [SystemTreePaneRefs]
+        let selectedPageRef: JSONValue
+        let pages: [SystemTreePageRefs]
+    }
+
+    private struct SystemTreePageRefs: Sendable {
+        let pageRef: JSONValue
+        let panes: [SystemTreePaneRefs]
     }
 
     private struct SystemTreePaneRefs: Sendable {
@@ -225,6 +232,15 @@ extension ControlCommandCoordinator {
     private func systemTreeWorkspaceRefs(_ node: ControlSystemTreeWorkspaceNode) -> SystemTreeWorkspaceRefs {
         SystemTreeWorkspaceRefs(
             workspaceRef: ref(.workspace, node.workspaceID),
+            panes: node.panes.map { systemTreePaneRefs($0) },
+            selectedPageRef: ref(.page, node.selectedPageID),
+            pages: node.pages.map { systemTreePageRefs($0) }
+        )
+    }
+
+    private func systemTreePageRefs(_ node: ControlSystemTreePageNode) -> SystemTreePageRefs {
+        SystemTreePageRefs(
+            pageRef: ref(.page, node.pageID),
             panes: node.panes.map { systemTreePaneRefs($0) }
         )
     }
@@ -279,6 +295,29 @@ extension ControlCommandCoordinator {
             "description": orNull(node.description),
             "selected": .bool(node.isSelected),
             "pinned": .bool(node.isPinned),
+            "selected_page_id": .string(node.selectedPageID.uuidString),
+            "selected_page_ref": refs.selectedPageRef,
+            "page_count": .int(Int64(node.pages.count)),
+            "pages": .array(zip(node.pages, refs.pages).map { pair in systemTreePagePayload(pair.0, refs: pair.1) }),
+            // Preserve the selected page's panes at workspace.panes for older
+            // tree consumers that predate workspace pages.
+            "panes": .array(zip(node.panes, refs.panes).map { pair in systemTreePanePayload(pair.0, refs: pair.1) }),
+        ])
+    }
+
+    /// The `system.tree` page node payload (the legacy `v2TreePageNode`).
+    private nonisolated func systemTreePagePayload(
+        _ node: ControlSystemTreePageNode,
+        refs: SystemTreePageRefs
+    ) -> JSONValue {
+        .object([
+            "id": .string(node.pageID.uuidString),
+            "ref": refs.pageRef,
+            "index": .int(Int64(node.index)),
+            "title": .string(node.title),
+            "selected": .bool(node.isSelected),
+            "pane_count": .int(Int64(node.paneCount)),
+            "surface_count": .int(Int64(node.surfaceCount)),
             "panes": .array(zip(node.panes, refs.panes).map { pair in systemTreePanePayload(pair.0, refs: pair.1) }),
         ])
     }

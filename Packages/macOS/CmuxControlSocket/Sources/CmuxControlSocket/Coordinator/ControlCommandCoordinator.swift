@@ -82,6 +82,7 @@ public final class ControlCommandCoordinator {
         if let result = handleCanvas(request) { return result }
         if let result = handleMobileHost(request) { return result }
         if let result = handleWorkspace(request) { return result }
+        if let result = handlePage(request) { return result }
         if let result = handleSurface(request) { return result }
         if let result = handleSystem(request) { return result }
         if let result = handleProject(request) { return result }
@@ -267,6 +268,7 @@ public final class ControlCommandCoordinator {
             windowID: uuid(params, "window_id"),
             groupID: uuid(params, "group_id"),
             workspaceID: uuid(params, "workspace_id"),
+            pageID: uuid(params, "page_id"),
             surfaceID: uuid(params, "surface_id")
                 ?? uuid(params, "terminal_id")
                 ?? uuid(params, "tab_id"),
