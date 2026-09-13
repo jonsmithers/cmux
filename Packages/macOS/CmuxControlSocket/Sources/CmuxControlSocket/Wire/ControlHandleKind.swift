@@ -7,6 +7,8 @@ public enum ControlHandleKind: String, CaseIterable, Sendable {
     case window
     /// A workspace (tab).
     case workspace
+    /// A workspace page (titlebar-level layout inside a workspace).
+    case page
     /// A workspace group.
     case workspaceGroup = "workspace_group"
     /// A split pane.
